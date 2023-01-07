@@ -4,6 +4,8 @@
 import dotenv
 dotenv.load_dotenv()
 
+from datetime import datetime
+import logging
 import pymongo 
 import interactions 
 import os
@@ -14,18 +16,15 @@ bot = interactions.Client(token=os.getenv('BOT_TOKEN'),
 mongouri = os.getenv('URI')
 
 #basic mongo setup
-client = pymongo.MongoClient(mongouri)
-db = client["Polynomers"]
+mclient = pymongo.MongoClient(mongouri)
+db = mclient["Polynomers"]
 col = db["Users/IDs"]
-
 
 
 #ping command
 @bot.command(name="ping", description="Sends ping")
 async def ping(ctx: interactions.CommandContext):
   await ctx.send(f"Pong! Latency: {'%.3f'%(bot.latency)} ms.")
-
-
 
 
 #cooldown command (adds cooldown role, removes everything else, stores old roles in database)
@@ -46,6 +45,7 @@ async def giverole(ctx: interactions.CommandContext, member: any):
                    ephemeral=True)
   else:
     cguild = await ctx.get_guild()
+    chan = await interactions.get(bot, interactions.Channel, object_id = 1061098587028734032)
     targname = member.username 
     targroles = member.roles
     userdict = {"name": targname, "id": targid, "roles": targroles}
@@ -56,7 +56,16 @@ async def giverole(ctx: interactions.CommandContext, member: any):
     await ctx.send(content=f"{targname} has been given the cooldown role.",
                    ephemeral=True)
 
-
+    # log embed
+    cdembed = interactions.Embed(
+      author = interactions.EmbedAuthor(name = f"{member.username}#{member.discriminator} has been cooled down.", icon_url = member.avatar_url),
+      timestamp = datetime.now(),
+      color = 7450583
+    )
+    cdembed.add_field(name = "User", value=member.mention, inline=True)
+    cdembed.add_field(name = "Moderator", value=ctx.author.mention, inline=True)
+    cdembed.set_footer(text = f"User ID: {member.id}")
+    await chan.send(embeds = cdembed)
 
 
 #reverse cooldown command (removes cooldown role, finds old roles in database, adds roles back, deletes database entry)
@@ -77,6 +86,7 @@ async def removerole(ctx: interactions.CommandContext, member: any):
                    ephemeral=True)
   else:
     cguild = await ctx.get_guild()
+    chan = await interactions.get(bot, interactions.Channel, object_id = 1061098587028734032)
     for i in ((col.find_one({"name": member.username}))["roles"]): #cycles through the database adding roles back one by one
       await member.add_role(i,804491292405923841)
     col.delete_one({"id": targid}) 
@@ -84,5 +94,16 @@ async def removerole(ctx: interactions.CommandContext, member: any):
     await ctx.send(
       content=f"The cooldown role has been removed from {member.username}",
       ephemeral=True)
+
+    #log embed
+    cdembed = interactions.Embed(
+      author = interactions.EmbedAuthor(name = f"{member.username}#{member.discriminator}'s cooldown has been removed.", icon_url = member.avatar_url),
+      timestamp = datetime.now(),
+      color = 12264277
+    )
+    cdembed.add_field(name = "User", value=member.mention, inline=True)
+    cdembed.add_field(name = "Moderator", value=ctx.author.mention, inline=True)
+    cdembed.set_footer(text = f"User ID: {member.id}")
+    await chan.send(embeds = cdembed)
 
 bot.start()
