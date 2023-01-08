@@ -46,15 +46,6 @@ async def giverole(ctx: interactions.CommandContext, member: any):
   else:
     cguild = await ctx.get_guild()
     chan = await interactions.get(bot, interactions.Channel, object_id = 1061098587028734032)
-    targname = member.username 
-    targroles = member.roles
-    userdict = {"name": targname, "id": targid, "roles": targroles}
-    col.insert_one(userdict)
-    await member.add_role(await cguild.get_role(1051252322803646535), 804491292405923841)
-    for i in member.roles: #cycles through member roles removing them one by one
-      await member.remove_role(i,804491292405923841)
-    await ctx.send(content=f"{targname} has been given the cooldown role.",
-                   ephemeral=True)
 
     # log embed
     cdembed = interactions.Embed(
@@ -66,6 +57,17 @@ async def giverole(ctx: interactions.CommandContext, member: any):
     cdembed.add_field(name = "Moderator", value=ctx.author.mention, inline=True)
     cdembed.set_footer(text = f"User ID: {member.id}")
     await chan.send(embeds = cdembed)
+    
+    targname = member.username 
+    targroles = member.roles
+    userdict = {"name": targname, "id": targid, "roles": targroles}
+    col.insert_one(userdict)
+    await member.add_role(await cguild.get_role(1051252322803646535), 804491292405923841)
+    for i in member.roles: #cycles through member roles removing them one by one
+      await member.remove_role(i,804491292405923841)
+    await ctx.send(content=f"{targname} has been given the cooldown role.",
+                   ephemeral=True)
+
 
 
 #reverse cooldown command (removes cooldown role, finds old roles in database, adds roles back, deletes database entry)
@@ -87,14 +89,7 @@ async def removerole(ctx: interactions.CommandContext, member: any):
   else:
     cguild = await ctx.get_guild()
     chan = await interactions.get(bot, interactions.Channel, object_id = 1061098587028734032)
-    for i in ((col.find_one({"name": member.username}))["roles"]): #cycles through the database adding roles back one by one
-      await member.add_role(i,804491292405923841)
-    col.delete_one({"id": targid}) 
-    await member.remove_role(await cguild.get_role(1051252322803646535), 804491292405923841)
-    await ctx.send(
-      content=f"The cooldown role has been removed from {member.username}",
-      ephemeral=True)
-
+    
     #log embed
     cdembed = interactions.Embed(
       author = interactions.EmbedAuthor(name = f"{member.username}#{member.discriminator}'s cooldown has been removed.", icon_url = member.avatar_url),
@@ -105,5 +100,16 @@ async def removerole(ctx: interactions.CommandContext, member: any):
     cdembed.add_field(name = "Moderator", value=ctx.author.mention, inline=True)
     cdembed.set_footer(text = f"User ID: {member.id}")
     await chan.send(embeds = cdembed)
+    
+    #remove roles
+    for i in ((col.find_one({"name": member.username}))["roles"]): #cycles through the database adding roles back one by one
+      await member.add_role(i,804491292405923841)
+    col.delete_one({"id": targid}) 
+    await member.remove_role(await cguild.get_role(1051252322803646535), 804491292405923841)
+    await ctx.send(
+      content=f"The cooldown role has been removed from {member.username}",
+      ephemeral=True)
+
+
 
 bot.start()
